@@ -8,13 +8,6 @@ interface UserFormData extends Record<string, string> {
 }
 
 export function renderUserForm(container: HTMLElement, onSubmit: (user: User) => void): void {
-    const wrapper = document.createElement('div');
-
-    const title = document.createElement('h4');
-    title.className = 'mb-3 fw-bold';
-    title.textContent = 'Додати Користувача';
-    wrapper.appendChild(title);
-
     const form = buildForm<UserFormData>({
         fields: [
             { name: 'name', label: "Ім'я", type: 'text' },
@@ -25,6 +18,5 @@ export function renderUserForm(container: HTMLElement, onSubmit: (user: User) =>
         onValid: (data) => onSubmit(new User(data.name, data.email)),
     });
 
-    wrapper.appendChild(form);
-    container.appendChild(wrapper);
+    container.appendChild(form);
 }
