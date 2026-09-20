@@ -1,4 +1,5 @@
 import { IUser } from './interfaces/IUser';
+import { generateId } from '../utils/idGenerator';
 
 export class User implements IUser {
     private id: string;
@@ -7,7 +8,7 @@ export class User implements IUser {
     private borrowedBooks: string[];
 
     constructor(name: string, email: string, id?: string) {
-        this.id = id || Date.now().toString();
+        this.id = id || generateId();
         this.name = name;
         this.email = email;
         this.borrowedBooks = [];
