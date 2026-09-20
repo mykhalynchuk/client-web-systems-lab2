@@ -2,15 +2,18 @@ import { Book } from '../models/Book';
 import { User } from '../models/User';
 import { Library } from '../services/Library';
 import { Storage } from '../services/Storage';
+import { NotificationService } from '../services/NotificationService';
 import { renderBookFormBuilder } from './components/BookForm';
 import { renderUserForm } from './components/UserForm';
 import { renderBookList } from './components/BookList';
+import { renderUserList } from './components/UserList';
 import { showModal } from './components/Modal';
 
 export class AppRenderer {
     private bookLibrary: Library<Book>;
     private userLibrary: Library<User>;
     private appContainer: HTMLElement;
+    private searchQuery: string = '';
 
     constructor() {
         const savedBooks = Storage.load<any>('books') || [];
@@ -60,6 +63,7 @@ export class AppRenderer {
         renderBookFormBuilder(bookFormContainer, (book) => {
             this.bookLibrary.add(book);
             this.saveData();
+            NotificationService.notifySuccess(`Книгу "${book.getTitle()}" додано.`);
             this.renderLayout();
         });
 
@@ -69,20 +73,102 @@ export class AppRenderer {
         renderUserForm(userFormContainer, (user) => {
             this.userLibrary.add(user);
             this.saveData();
+            NotificationService.notifySuccess(`Користувача "${user.getName()}" додано.`);
             this.renderLayout();
         });
+
+        // Пошук
+        this.renderSearchBlock();
 
         const listContainer = document.createElement('div');
         this.appContainer.appendChild(listContainer);
 
+        let displayBooks = this.bookLibrary.getAll();
+        if (this.searchQuery) {
+            const lowerQuery = this.searchQuery.toLowerCase();
+            displayBooks = this.bookLibrary.search(
+                book => book.getTitle().toLowerCase().includes(lowerQuery) ||
+                    book.getAuthor().toLowerCase().includes(lowerQuery)
+            );
+        }
+
         renderBookList(
             listContainer,
-            this.bookLibrary.getAll(),
+            displayBooks,
             (bookId) => this.handleBorrow(bookId),
-            (bookId) => this.handleReturn(bookId)
+            (bookId) => this.handleReturn(bookId),
+            (bookId) => this.handleDeleteBook(bookId)
+        );
+
+        const userListContainer = document.createElement('div');
+        this.appContainer.appendChild(userListContainer);
+        renderUserList(
+            userListContainer,
+            this.userLibrary.getAll(),
+            (userId) => this.handleDeleteUser(userId)
         );
     }
 
+    private renderSearchBlock(): void {
+        const searchWrapper = document.createElement('div');
+        searchWrapper.className = 'mb-4';
+
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control';
+        searchInput.placeholder = 'Пошук книг за назвою або автором...';
+        searchInput.value = this.searchQuery;
+
+        searchInput.addEventListener('input', (e) => {
+            this.searchQuery = (e.target as HTMLInputElement).value;
+            // Перемальовуємо тільки потрібні частини, але для простоти перемалюємо все
+            this.renderLayout();
+            // Повертаємо фокус на поле після перемалювання
+            const newSearchInput = this.appContainer.querySelector('input[placeholder="Пошук книг за назвою або автором..."]') as HTMLInputElement;
+            if (newSearchInput) {
+                newSearchInput.focus();
+                // Ставимо курсор в кінець тексту
+                const val = newSearchInput.value;
+                newSearchInput.value = '';
+                newSearchInput.value = val;
+            }
+        });
+
+        searchWrapper.appendChild(searchInput);
+        this.appContainer.appendChild(searchWrapper);
+    }
+
+    private handleDeleteBook(bookId: string): void {
+        const book = this.bookLibrary.findById(bookId);
+        if (!book) return;
+
+        if (book.isBorrowed()) {
+            NotificationService.notifyError('Неможливо видалити позичену книгу. Спочатку поверніть її.');
+            return;
+        }
+
+        this.bookLibrary.remove(bookId);
+        this.saveData();
+        NotificationService.notifySuccess(`Книгу видалено.`);
+        this.renderLayout();
+    }
+
+    private handleDeleteUser(userId: string): void {
+        const user = this.userLibrary.findById(userId);
+        if (!user) return;
+
+        if (user.getBorrowedBooks().length > 0) {
+            NotificationService.notifyError('Неможливо видалити користувача, який має позичені книги.');
+            return;
+        }
+
+        this.userLibrary.remove(userId);
+        this.saveData();
+        NotificationService.notifySuccess(`Користувача видалено.`);
+        this.renderLayout();
+    }
+
+    // ... (код методів handleBorrow, handleReturn, saveData залишається без змін, такий як був у попередньому файлі)
     private handleBorrow(bookId: string): void {
         showModal({
             title: 'Введіть ID користувача для позичення книги:',
@@ -94,16 +180,12 @@ export class AppRenderer {
 
                 const user = this.userLibrary.findById(userId);
                 if (!user) {
-                    showModal({ title: 'Помилка', message: 'Користувача не знайдено', type: 'error' });
+                    NotificationService.notifyError('Користувача не знайдено');
                     return;
                 }
 
                 if (!user.canBorrow()) {
-                    showModal({
-                        title: 'Ліміт перевищено',
-                        message: 'Користувач вже позичив 3 книги.',
-                        type: 'error'
-                    });
+                    NotificationService.notifyError('Користувач вже позичив 3 книги. Ліміт перевищено.');
                     return;
                 }
 
@@ -114,11 +196,9 @@ export class AppRenderer {
                     this.saveData();
                     this.renderLayout();
 
-                    showModal({
-                        title: 'Успіх',
-                        message: `${book.getTitle()} by ${book.getAuthor()} (${book.getYear()}) has been borrowed by ${user.getId()} ${user.getName()} (${user.getEmail()}).`,
-                        type: 'success'
-                    });
+                    NotificationService.notifySuccess(
+                        `${book.getTitle()} by ${book.getAuthor()} (${book.getYear()}) has been borrowed by ${user.getId()} ${user.getName()} (${user.getEmail()}).`
+                    );
                 }
             }
         });
@@ -136,11 +216,9 @@ export class AppRenderer {
             this.saveData();
             this.renderLayout();
 
-            showModal({
-                title: 'Повернено',
-                message: `${book.getTitle()} by ${book.getAuthor()} (${book.getYear()}) has been returned.`,
-                type: 'success'
-            });
+            NotificationService.notifySuccess(
+                `${book.getTitle()} by ${book.getAuthor()} (${book.getYear()}) has been returned.`
+            );
         }
     }
 
