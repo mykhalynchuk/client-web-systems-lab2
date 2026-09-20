@@ -14,6 +14,9 @@ export class AppRenderer {
     private userLibrary: Library<User>;
     private appContainer: HTMLElement;
     private searchQuery: string = '';
+    private currentBookPage: number = 1;
+    private currentUserPage: number = 1;
+    private readonly itemsPerPage: number = 5;
 
     constructor() {
         const savedBooks = Storage.load<any>('books') || [];
@@ -95,17 +98,30 @@ export class AppRenderer {
         renderBookList(
             listContainer,
             displayBooks,
-            (bookId) => this.handleBorrow(bookId),
-            (bookId) => this.handleReturn(bookId),
-            (bookId) => this.handleDeleteBook(bookId)
+            this.currentBookPage,
+            this.itemsPerPage,
+            (page: number) => {
+                this.currentBookPage = page;
+                this.renderLayout();
+            },
+            (bookId: string) => this.handleBorrow(bookId),
+            (bookId: string) => this.handleReturn(bookId),
+            (bookId: string) => this.handleDeleteBook(bookId)
         );
 
         const userListContainer = document.createElement('div');
         this.appContainer.appendChild(userListContainer);
+
         renderUserList(
             userListContainer,
             this.userLibrary.getAll(),
-            (userId) => this.handleDeleteUser(userId)
+            this.currentUserPage,
+            this.itemsPerPage,
+            (page: number) => {
+                this.currentUserPage = page;
+                this.renderLayout();
+            },
+            (userId: string) => this.handleDeleteUser(userId)
         );
     }
 
@@ -121,13 +137,12 @@ export class AppRenderer {
 
         searchInput.addEventListener('input', (e) => {
             this.searchQuery = (e.target as HTMLInputElement).value;
-            // Перемальовуємо тільки потрібні частини, але для простоти перемалюємо все
+            this.currentBookPage = 1; // Скидаємо на першу сторінку при пошуку
             this.renderLayout();
-            // Повертаємо фокус на поле після перемалювання
+
             const newSearchInput = this.appContainer.querySelector('input[placeholder="Пошук книг за назвою або автором..."]') as HTMLInputElement;
             if (newSearchInput) {
                 newSearchInput.focus();
-                // Ставимо курсор в кінець тексту
                 const val = newSearchInput.value;
                 newSearchInput.value = '';
                 newSearchInput.value = val;
@@ -148,6 +163,17 @@ export class AppRenderer {
         }
 
         this.bookLibrary.remove(bookId);
+
+        // Корекція пагінації, якщо видалили останній елемент на сторінці
+        const displayBooks = this.searchQuery
+            ? this.bookLibrary.search(b => b.getTitle().toLowerCase().includes(this.searchQuery.toLowerCase()) || b.getAuthor().toLowerCase().includes(this.searchQuery.toLowerCase()))
+            : this.bookLibrary.getAll();
+
+        const totalPages = Math.ceil(displayBooks.length / this.itemsPerPage) || 1;
+        if (this.currentBookPage > totalPages) {
+            this.currentBookPage = totalPages;
+        }
+
         this.saveData();
         NotificationService.notifySuccess(`Книгу видалено.`);
         this.renderLayout();
@@ -163,12 +189,18 @@ export class AppRenderer {
         }
 
         this.userLibrary.remove(userId);
+
+        // Корекція пагінації, якщо видалили останнього на сторінці
+        const totalPages = Math.ceil(this.userLibrary.getAll().length / this.itemsPerPage) || 1;
+        if (this.currentUserPage > totalPages) {
+            this.currentUserPage = totalPages;
+        }
+
         this.saveData();
         NotificationService.notifySuccess(`Користувача видалено.`);
         this.renderLayout();
     }
 
-    // ... (код методів handleBorrow, handleReturn, saveData залишається без змін, такий як був у попередньому файлі)
     private handleBorrow(bookId: string): void {
         showModal({
             title: 'Введіть ID користувача для позичення книги:',

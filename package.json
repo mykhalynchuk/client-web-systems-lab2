@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "mocha -r ts-node/register tests/**/*.test.ts"
+    "test": "NODE_OPTIONS='--loader ts-node/esm' mocha tests/**/*.test.ts",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
@@ -21,11 +22,5 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.8"
-  },
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "NODE_OPTIONS='--loader ts-node/esm' mocha tests/**/*.test.ts"
   }
 }
