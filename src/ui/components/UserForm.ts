@@ -1,4 +1,4 @@
-import { User } from '../../models/User';
+import { User } from '../../models';
 import { Validation } from '../../utils/validators';
 import { buildForm } from './FormBuilder';
 

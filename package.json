@@ -3,18 +3,18 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "NODE_OPTIONS='--loader ts-node/esm' mocha tests/**/*.test.ts",
-    "prepare": "husky"
-  },
   "devDependencies": {
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "chai": "^6.2.2",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "gh-pages": "^6.3.0",
     "mocha": "^12.0.2",
+    "prettier": "^3.9.8",
     "sass": "^1.104.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.0",
@@ -22,5 +22,15 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.8"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "NODE_OPTIONS='--loader ts-node/esm' mocha tests/**/*.test.ts",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts",
+    "prepare": "husky",
+    "deploy": "vite build && gh-pages -d dist --repo https://github.com/mykhalynchuk/client-web-systems-lab2.git"
   }
 }

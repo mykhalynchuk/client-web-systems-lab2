@@ -1,8 +1,5 @@
-import { Book } from '../models/Book';
-import { User } from '../models/User';
-import { Library } from '../services/Library';
-import { Storage } from '../services/Storage';
-import { NotificationService } from '../services/NotificationService';
+import { Book, User } from '../models';
+import { Library, Storage, NotificationService } from '../services';
 import { renderBookFormBuilder } from './components/BookForm';
 import { renderUserForm } from './components/UserForm';
 import { renderBookList } from './components/BookList';
